@@ -1,5 +1,3 @@
-"use client"
-
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import MonacoEditor from '@monaco-editor/react';
@@ -9,46 +7,88 @@ import { Loader2, Video, X } from 'lucide-react';
 import ReactPlayer from 'react-player';
 import StatisticsPage from './StatisticsPage';
 
-export default function PythonQuizApp({ questions, timePerQuestion }) {
+interface TestCase {
+  input: string;
+  expected_output: string;
+}
+
+interface Question {
+  question_text: string;
+  boilerplate_code?: string;
+  test_cases: TestCase[];
+  difficulty?: string;
+  subtopic?: string;
+  video?: string;
+}
+
+interface QuestionResult {
+  difficulty: string | null;
+  timeTaken: number;
+  subtopic: string | null;
+  isCorrect: boolean | null;
+  question: Question;
+  userAnswer: string | null;
+  timeUp: boolean;
+}
+
+interface TimeTracker {
+  elapsed: number;
+  remaining: number;
+  isPaused: boolean;
+}
+
+interface TestResult {
+  input: string;
+  expectedOutput: string;
+  actualOutput: string;
+  passed: boolean;
+}
+
+interface PythonQuizAppProps {
+  questions: Question[];
+  timePerQuestion: number;
+}
+
+export default function PythonQuizApp({ questions, timePerQuestion }: PythonQuizAppProps) {
   const { user, isLoaded, isSignedIn } = useUser();
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [userCodes, setUserCodes] = useState(() => 
+  const [userCodes, setUserCodes] = useState<string[]>(() => 
     questions.map(q => q.boilerplate_code || '')
   );
-  const [feedback, setFeedback] = useState('');
+  const [feedback, setFeedback] = useState<{ text: string; isCorrect: boolean; testResults?: TestResult[] } | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isRunning, setIsRunning] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [output, setOutput] = useState(null);
+  const [output, setOutput] = useState<string | null>(null);
   const [isVideoPopupOpen, setIsVideoPopupOpen] = useState(false);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const [quizSubmitted, setQuizSubmitted] = useState(false);
 
   const [isTimeUp, setIsTimeUp] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(timePerQuestion * 60);
-  const [timeTrackers, setTimeTrackers] = useState(() => 
-    Array(questions.length).fill().map(() => ({
+  const [timeTrackers, setTimeTrackers] = useState<TimeTracker[]>(() => 
+    Array(questions.length).fill(null).map(() => ({
       elapsed: 0,
       remaining: timePerQuestion * 60,
       isPaused: true
     }))
   );
   const [isTimerRunning, setIsTimerRunning] = useState(true);
-  const [questionResults, setQuestionResults] = useState(() =>
-    Array(questions.length).fill().map(() => ({
+  const [questionResults, setQuestionResults] = useState<QuestionResult[]>(() =>
+    Array(questions.length).fill(null).map(() => ({
       difficulty: null,
       timeTaken: 0,
       subtopic: null,
       isCorrect: null,
-      question: null,
+      question: questions[0],
       userAnswer: null,
       timeUp: false
     }))
   );
 
   useEffect(() => {
-    let timer;
+    let timer: NodeJS.Timeout;
     if (isTimerRunning && !isTimeUp) {
       timer = setInterval(() => {
         setTimeTrackers(prevTrackers => {
@@ -83,8 +123,7 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
     setTimeRemaining(timeTrackers[currentQuestionIndex].remaining);
   }, [timeTrackers, currentQuestionIndex]);
 
-
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number): string => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
@@ -105,8 +144,8 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
     setCurrentVideoUrl('');
   };
 
-  const checkAllTestCases = async (userCode) => {
-    const results = [];
+  const checkAllTestCases = async (userCode: string): Promise<TestResult[]> => {
+    const results: TestResult[] = [];
     for (const testCase of questions[currentQuestionIndex].test_cases) {
       try {
         const response = await axios.post('https://emkc.org/api/v2/piston/execute', {
@@ -150,7 +189,7 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
       updateQuestionResult(allTestsPassed, userCodes[currentQuestionIndex]);
       
       setFeedback({
-        text: allTestsPassed ? '' : '',
+        text: allTestsPassed ? 'All tests passed!' : 'Some tests failed.',
         isCorrect: allTestsPassed,
         testResults: testResults
       });
@@ -165,6 +204,7 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
       setIsRunning(false);
     }
   };
+
   const handleTestCode = async () => {
     if (isTimeUp) {
       setFeedback({ text: 'Time is up! Cannot submit answer.', isCorrect: false });
@@ -195,7 +235,7 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
     }
   };
   
-  const handleQuestionSelect = (index) => {
+  const handleQuestionSelect = (index: number) => {
     if (!questionResults[currentQuestionIndex].isCorrect && 
         !questionResults[currentQuestionIndex].timeUp) {
       updateQuestionResult(null);
@@ -203,13 +243,13 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
 
     setCurrentQuestionIndex(index);
     setTimeRemaining(timeTrackers[index].remaining);
-    setFeedback('');
+    setFeedback(null);
     setOutput(null);
     setIsTimeUp(timeTrackers[index].remaining <= 0);
     setIsTimerRunning(timeTrackers[index].remaining > 0);
   };
 
-  const updateQuestionResult = (isCorrect = null, userAnswer = null) => {
+  const updateQuestionResult = (isCorrect: boolean | null, userAnswer: string | null = null) => {
     const currentQuestion = questions[currentQuestionIndex];
     const timeTaken = timeTrackers[currentQuestionIndex].elapsed;
 
@@ -253,7 +293,7 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
           results: [{
             questions: questionResults.map(result => ({
               ...result,
-              question: questions[result.questionIndex],
+              question: questions[questionResults.indexOf(result)],
               timeUp: result.timeUp || false,
               submittedAt: new Date()
             }))
@@ -284,9 +324,10 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
   if (quizSubmitted) {
     return (
       <StatisticsPage
-        testId={user?.id || 'anonymous'}
+        score={questionResults.filter(r => r.isCorrect).length}
+        totalQuestions={questions.length}
+        totalTime={timePerQuestion * questions.length * 60}
         results={questionResults}
-        totalTime={timePerQuestion}
       />
     );
   }
@@ -298,15 +339,15 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
       <nav className={`${isDarkMode ? 'bg-[#403f3f]' : 'bg-gray-200'} p-4 flex justify-between items-center`}>
         <h1 className="mb-4 text-xl font-bold">Python Quiz</h1>
         <div className="flex items-center space-x-4">
-        { currentQuestionIndex === questions.length - 1  &&  (<button
-        className={`flex-1 ${
-          isRunning ? 'bg-teal-500' : 'bg-teal-600'
-        } text-white px-4 py-2 rounded hover:bg-teal-700 focus:outline-none flex items-center justify-center`}
-        onClick={handleSubmitQuiz}
-        disabled={isRunning}
-      > 
-        Submit Quiz
-      </button>)}
+        { currentQuestionIndex === questions.length - 1  &&  (
+          <button
+            className={`flex-1 ${isRunning ? 'bg-teal-500' : 'bg-teal-600'} text-white px-4 py-2 rounded hover:bg-teal-700 focus:outline-none flex items-center justify-center`}
+            onClick={handleSubmitQuiz}
+            disabled={isRunning}
+          > 
+            Submit Quiz
+          </button>
+        )}
           <div className="text-lg font-semibold">
             Time remaining: {formatTime(timeRemaining)}
           </div>
@@ -403,7 +444,7 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
               onChange={(newValue) => {
                 setUserCodes(prevCodes => {
                   const newCodes = [...prevCodes];
-                  newCodes[currentQuestionIndex] = newValue;
+                  newCodes[currentQuestionIndex] = newValue || '';
                   return newCodes;
                 });
               }}
@@ -430,21 +471,21 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
                     </>
                   ) : 'Run code'}
                 </button>
-             <button
-             className={`flex-1 ${isRunning ? 'bg-teal-500' : 'bg-teal-600'} text-white px-4 py-2 rounded hover:bg-teal-700 focus:outline-none flex items-center justify-center`}
-             onClick={handleTestCode}
-             disabled={isSubmitting}
-             >
-               {isSubmitting ? (
+                <button
+                  className={`flex-1 ${isRunning ? 'bg-teal-500' : 'bg-teal-600'} text-white px-4 py-2 rounded hover:bg-teal-700 focus:outline-none flex items-center justify-center`}
+                  onClick={handleTestCode}
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Submiting...
+                      Submitting...
                     </>
                   ) : 'Submit code'}
-             </button>
+                </button>
               </div>
               <div className={`mt-4 ${isDarkMode ? 'bg-[#262626]' : 'bg-white'} rounded p-4 flex-grow overflow-y-auto`}>
                 {feedback && (
@@ -452,7 +493,7 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
                     {feedback.text}
                   </div>
                 )}
-                {output !== null && (
+                {feedback && feedback.testResults && (
                   <div className="mt-4 flex flex-col space-y-4">
                     <h3 className="text-lg font-semibold">Test Results</h3>
                     {feedback.testResults.map((result, index) => (
@@ -518,3 +559,4 @@ export default function PythonQuizApp({ questions, timePerQuestion }) {
     </div>
   );
 }
+

@@ -8,7 +8,17 @@ import LeaderboardPage from './components/LeaderboardPage';
 import  History  from './components/History';
 import QuizApp from './components/QuizApp';
 import PythonQuizApp from './components/PythonQuizApp'
-import Quiz from './components/Quiz'
+import Quiz from './components/Quiz';
+
+
+
+
+
+interface Question {
+  // Define properties
+}
+
+
 
 const QuizWrapper: React.FC = () => {
   const [questions, setQuestions] = React.useState<Question[]>([]);
@@ -124,7 +134,7 @@ const App: React.FC = () => {
             <Layout>
               <Routes>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/statistics/:testId" element={<StatisticsPage testId="1" />} />
+                <Route path="/statistics/:testId" element={<StatisticsPage testId="1" results={[]} totalTime={0} />} />
                 <Route path="/payment" element={<PaymentPage />} />
                 <Route path="/leaderboard" element={<LeaderboardPage />} />
                 <Route path="/history" element={<History />} />

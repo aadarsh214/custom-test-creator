@@ -1,28 +1,36 @@
 import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, Pie, PieChart, Cell } from 'recharts'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from './ui/chart'
+import { ChartContainer } from './ui/chart'
 import { Progress } from './ui/progress'
+
+interface Question {
+  question_text: string
+  options: { [key: string]: string }
+  correct_answer: string
+}
 
 interface QuestionResult {
   subtopic: string
   difficulty: string
   isCorrect: boolean
   timeTaken: number
+  question: Question
+  userAnswer: string | null
+  timeUp: boolean
 }
 
 interface StatisticsProps {
-  testId: string
-  results: QuestionResult[]
+  score: number
+  totalQuestions: number
   totalTime: number
+  results: QuestionResult[]
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8']
 
-const StatisticsPage: React.FC<StatisticsProps> = ({ testId, results, totalTime }) => {
-  const totalQuestions = results.length
-  const correctAnswers = results.filter(r => r.isCorrect).length
-  const accuracy = (correctAnswers / totalQuestions) * 100
+const StatisticsPage: React.FC<StatisticsProps> = ({ score, totalQuestions, totalTime, results }) => {
+  const accuracy = (score / totalQuestions) * 100
 
   const subtopicData = results.reduce((acc, result) => {
     const existingSubtopic = acc.find(item => item.name === result.subtopic)
@@ -80,7 +88,6 @@ const StatisticsPage: React.FC<StatisticsProps> = ({ testId, results, totalTime 
   return (
     <div className="space-y-6 p-6 max-w-6xl mx-auto">
       <h1 className="text-3xl font-bold">Quiz Performance Statistics</h1>
-      <p className="text-muted-foreground">Test ID: {testId}</p>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -90,7 +97,7 @@ const StatisticsPage: React.FC<StatisticsProps> = ({ testId, results, totalTime 
           <CardContent className="grid gap-4">
             <div className="flex justify-between items-center">
               <span>Total Score:</span>
-              <span className="font-bold">{correctAnswers} / {totalQuestions}</span>
+              <span className="font-bold">{score} / {totalQuestions}</span>
             </div>
             <div className="flex justify-between items-center">
               <span>Accuracy:</span>
@@ -129,7 +136,7 @@ const StatisticsPage: React.FC<StatisticsProps> = ({ testId, results, totalTime 
                     dataKey="value"
                     label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
                   >
-                    {timeDistributionData.map((entry, index) => (
+                    {timeDistributionData.map((_entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -226,3 +233,4 @@ const StatisticsPage: React.FC<StatisticsProps> = ({ testId, results, totalTime 
 }
 
 export default StatisticsPage
+

@@ -1,17 +1,24 @@
 {
   "files": [],
   "references": [
-    {
-      "path": "./tsconfig.app.json"
-    },
-    {
-      "path": "./tsconfig.node.json"
-    }
+      {
+          "path": "./tsconfig.app.json"
+      },
+      {
+          "path": "./tsconfig.node.json"
+      }
   ],
   "compilerOptions": {
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["src/*"]
-    }
-  }
+    "declaration": true,         // Generate .d.ts declaration files
+    "allowJs": true,             // Allow JavaScript files in the project
+    "skipLibCheck": true,        // Skip type checking of declaration files
+    "esModuleInterop": true,     // Enable esModuleInterop
+    "strict": true,              // Enable strict type checking
+    "moduleResolution": "node",  // Resolve modules like Node
+    "outDir": "./dist",          // Output directory for compiled files
+    "rootDir": "./src",          // Root directory for source files
+    "resolveJsonModule": true    // Allow importing JSON files
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx", "src/components/Quiz.tsx"],
+  "exclude": ["node_modules"]
 }
